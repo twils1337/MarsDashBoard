@@ -1,7 +1,12 @@
+
 let store = {
-    user: { name: "Student" },
-    apod: '',
     rovers: ['Curiosity', 'Opportunity', 'Spirit'],
+    photos:[],
+    rover_i: 0,
+    landing_date: '',
+    launch_date: '',
+    status: '',
+    max_date : ''
 }
 
 // add our markup to the page
@@ -19,87 +24,106 @@ const render = async (root, state) => {
 
 // create content
 const App = (state) => {
-    let { rovers, apod } = state
-
     return `
         <header></header>
         <main>
-            ${Greeting(store.user.name)}
+           <h1 style="text-align:center;">Mars Dash Board</h1>
+           <br>
+           <br>
             <section>
-                <h3>Put things on the page!</h3>
-                <p>Here is an example section.</p>
-                <p>
-                    One of the most popular websites at NASA is the Astronomy Picture of the Day. In fact, this website is one of
-                    the most popular websites across all federal agencies. It has the popular appeal of a Justin Bieber video.
-                    This endpoint structures the APOD imagery and associated metadata so that it can be repurposed for other
-                    applications. In addition, if the concept_tags parameter is set to True, then keywords derived from the image
-                    explanation are returned. These keywords could be used as auto-generated hashtags for twitter or instagram feeds;
-                    but generally help with discoverability of relevant imagery.
-                </p>
-                ${ImageOfTheDay(apod)}
+            <div class="inline">
+            <h2 style="text-align:center;"> <a class="previous round" onclick=RoverNavigate(false)>&#8249;</a>  ${store.rovers[store.rover_i]}  <a class="next round" onclick=RoverNavigate(true)>&#8250; </a></h2>
+            </div>
             </section>
+            ${getDisplayCarouselForRover()}
         </main>
         <footer></footer>
     `
 }
 
 // listening for load event because page should load before any JS is called
-window.addEventListener('load', () => {
+window.addEventListener('load', async () => {
+    await getImagesForRover(store, 0)
     render(root, store)
 })
 
 // ------------------------------------------------------  COMPONENTS
 
-// Pure function that renders conditional information -- THIS IS JUST AN EXAMPLE, you can delete it.
-const Greeting = (name) => {
-    if (name) {
-        return `
-            <h1>Welcome, ${name}!</h1>
-        `
-    }
-
-    return `
-        <h1>Hello!</h1>
-    `
+//Handles the navigation between rovers based on the buttons beside the rover's name. Will update store once
+//correct index is calculated.
+const RoverNavigate = (toNext) => {
+    const rover_i = GetNextRoverIndex(toNext);
+    getImagesForRover(store, rover_i);
 }
 
-// Example of a pure function that renders infomation requested from the backend
-const ImageOfTheDay = (apod) => {
-
-    // If image does not already exist, or it is not from today -- request it again
-    const today = new Date()
-    const photodate = new Date(apod.date)
-    console.log(photodate.getDate(), today.getDate());
-
-    console.log(photodate.getDate() === today.getDate());
-    if (!apod || apod.date === today.getDate() ) {
-        getImageOfTheDay(store)
+const GetNextRoverIndex = (toNext) => {
+    const i = store.rover_i;
+    const roverSize = store.rovers.length;
+    if (toNext){
+        if (i + 1 === store.rovers.length){
+            return 0;
+        }
+        else{
+            return i + 1;
+        }
     }
-
-    // check if the photo of the day is actually type video!
-    if (apod.media_type === "video") {
-        return (`
-            <p>See today's featured video <a href="${apod.url}">here</a></p>
-            <p>${apod.title}</p>
-            <p>${apod.explanation}</p>
-        `)
-    } else {
-        return (`
-            <img src="${apod.image.url}" height="350px" width="100%" />
-            <p>${apod.image.explanation}</p>
-        `)
+    else{
+        if (i - 1 < 0){
+            return roverSize - 1;
+        }
+        else{
+            return i - 1;
+        }
     }
 }
 
 // ------------------------------------------------------  API CALLS
 
-// Example API call
-const getImageOfTheDay = (state) => {
-    let { apod } = state
-
-    fetch(`http://localhost:3000/apod`)
-        .then(res => res.json())
-        .then(apod => updateStore(store, { apod }))
-
-    return data
+const getImagesForRover = async (state, i) => {
+    const newState = Object.assign({}, state);
+    newState.rover_i = i
+    const roverName = state.rovers[newState.rover_i].toLowerCase();
+    const dto = await fetch(`http://localhost:3000/rover?name=${roverName}`)
+                      .then(res => res.json());
+    Object.assign(newState, dto);
+    updateStore(store, newState);
 }
+
+const getDisplayCarouselForRover = () =>{
+    const photos = store.photos;
+    let carousel = `
+    <div id="roverCarousel" class="carousel slide" data-ride="carousel">
+        <div class="carousel-inner">
+            ${getCarouselItem(photos[0], 0, store, true)}`;
+    for (let i = 1; i < store.photos.length; i++) {
+        carousel += getCarouselItem(photos[i], i, store, false);       
+    };
+    carousel += `
+        <a class="carousel-control-prev" href="#roverCarousel" role="button" data-slide="prev">
+            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+            <span class="sr-only">Previous</span>
+        </a>
+        <a class="carousel-control-next" href="#roverCarousel" role="button" data-slide="next">
+            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+            <span class="sr-only">Next</span>
+        </a>
+    </div>`;
+    return carousel;
+}
+
+const getCarouselItem = (photo, i, captionData, isActive) => {
+    return `
+    <div id="${captionData.rovers[captionData.rover_i]}_pic${i}" class="carousel-item ${isActive ? "active\"":"\""}>
+        <img src="${photo.img_src}" style="min-height:10%; max-height:10%; width:100%;">
+        <div class="carousel-caption d-none d-md-block">
+            <h5>Camera: ${photo.camera}</h5>
+            <ul>
+                <li>Status: ${captionData.status}</li>
+                <li>Photo Date: ${captionData.max_date}</li>
+                <li>Launch Date: ${captionData.launch_date}</li>
+                <li>Land Date: ${captionData.landing_date}</li>
+            </ul>
+        </div>      
+    </div>`;
+}
+
