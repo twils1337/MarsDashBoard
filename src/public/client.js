@@ -1,6 +1,8 @@
 const store = {
-  rovers: ['Curiosity', 'Opportunity', 'Spirit'],
-  photos: [],
+  // eslint-disable-next-line no-undef
+  rovers: Immutable.List(['Curiosity', 'Opportunity', 'Spirit']),
+  // eslint-disable-next-line no-undef
+  photos: Immutable.List([]),
   rover_i: 0,
   landing_date: '',
   launch_date: '',
@@ -28,7 +30,7 @@ const App = (state) => {
            <br>
             <section>
             <div class="inline">
-            <h2 style="text-align:center;color:white;"> <a class="previous round" onclick=RoverNavigate(false)>&#8249;</a>  ${store.rovers[store.rover_i]}  <a class="next round" onclick=RoverNavigate(true)>&#8250; </a></h2>
+            <h2 style="text-align:center;color:white;"> <a class="previous round" onclick=RoverNavigate(false)>&#8249;</a>  ${store.rovers.get(store.rover_i)}  <a class="next round" onclick=RoverNavigate(true)>&#8250; </a></h2>
             </div>
             </section>
             ${GetDisplayCarouselForRover()}
@@ -42,7 +44,7 @@ window.addEventListener('load', async() => {
   render(root, store);
 });
 
-// ------------------------------------------------------  COMPONENTS
+// ------------------------------------------------------  CAROUSEL NAVIGATION
 
 // Handles the navigation between rovers based on the buttons beside the rover's name. Will update store once
 // correct index is calculated.
@@ -54,9 +56,9 @@ const RoverNavigate = (toNext) => {
 
 const GetNextRoverIndex = (toNext) => {
   const i = store.rover_i;
-  const roverSize = store.rovers.length;
+  const roverSize = store.rovers.size;
   if (toNext) {
-    if (i + 1 === store.rovers.length) {
+    if (i + 1 === roverSize) {
       return 0;
     } else {
       return i + 1;
@@ -78,9 +80,11 @@ const GetNextRoverIndex = (toNext) => {
 const GetRoverDataAndImages = async(state, i) => {
   const newState = Object.assign({}, state);
   newState.rover_i = i;
-  const roverName = state.rovers[newState.rover_i].toLowerCase();
+  const roverName = state.rovers.get(newState.rover_i).toLowerCase();
   const dto = await fetch(`http://localhost:3000/rover?name=${roverName}`)
     .then(res => res.json());
+  // eslint-disable-next-line no-undef
+  dto.photos = Immutable.List(dto.photos);
   Object.assign(newState, dto);
   updateStore(store, newState);
 };
@@ -97,10 +101,7 @@ const GetDisplayCarouselForRover = () => {
   let carousel = `
     <div id="roverCarousel" class="carousel slide" data-ride="carousel" data-interval="10000">
         <div class="carousel-inner">
-            ${GetCarouselItem(photos[0], 0, store, true)}`;
-  for (let i = 1; i < store.photos.length; i++) {
-    carousel += GetCarouselItem(photos[i], i, store, false);
-  };
+            ${photos.map((photo, i) => GetCarouselItem(photo, i)).join(' ')}`;
   carousel += `
         <a class="carousel-control-prev" href="#roverCarousel" role="button" data-slide="prev">
             <span class="carousel-control-prev-icon" aria-hidden="true"></span>
@@ -118,21 +119,19 @@ const GetDisplayCarouselForRover = () => {
  * @description Helper function to help generate the indiviual items in the rover photo carousel
  * @param {object} photo - A photo object from a rover which contains the url to a photo from a particular rover to be retrieved & the name of the camera that rover used
  * @param {number} photoIndex - Index of photo in photos array. Passed in primarily to generate id tag for the photo
- * @param {object} captionData - An object that houses all the necessary caption data for each photo. Utilizes the store as the GetRoverDataAndImages function
- *                               returns all the required data and updates the store with it.
  * @return {string} The proper HTML for the carousel items which is the photo & some info about the photo that is being displayed
  */
-const GetCarouselItem = (photo, photoIndex, captionData, isActive) => {
+const GetCarouselItem = (photo, photoIndex) => {
   return `
-    <div id="${captionData.rovers[captionData.rover_i]}_pic_${photoIndex}" class="carousel-item ${isActive ? 'active"' : '"'}>
+    <div id="${store.rovers[store.rover_i]}_pic_${photoIndex}" class="carousel-item ${photoIndex === 0 ? 'active"' : '"'}>
         <img src="${photo.img_src}" style="min-height:10%; max-height:10%; width:100%;">
         <div class="carousel-caption d-none d-md-block">
-            <h5>Status: ${captionData.status}</h5>
+            <h5>Status: ${store.status}</h5>
             <ul>
                 <li>Camera: ${photo.camera}</li>
-                <li>Photo Date: ${captionData.max_date}</li>
-                <li>Launch Date: ${captionData.launch_date}</li>
-                <li>Land Date: ${captionData.landing_date}</li>
+                <li>Photo Date: ${store.max_date}</li>
+                <li>Launch Date: ${store.launch_date}</li>
+                <li>Land Date: ${store.landing_date}</li>
             </ul>
         </div>      
     </div>`;
