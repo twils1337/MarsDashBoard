@@ -1,5 +1,5 @@
 const store = {
-  rovers: Immutable.List['Curiosity', 'Opportunity', 'Spirit'],
+  rovers: Immutable.List(['Curiosity', 'Opportunity', 'Spirit']),
   photos: Immutable.List([]),
   rover_i: 0,
   landing_date: '',
