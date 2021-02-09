@@ -1,5 +1,5 @@
 const store = {
-  rovers: ['Curiosity', 'Opportunity', 'Spirit'],
+  rovers: Immutable.List['Curiosity', 'Opportunity', 'Spirit'],
   photos: [],
   rover_i: 0,
   landing_date: '',
@@ -81,6 +81,7 @@ const GetRoverDataAndImages = async(state, i) => {
   const roverName = state.rovers[newState.rover_i].toLowerCase();
   const dto = await fetch(`http://localhost:3000/rover?name=${roverName}`)
     .then(res => res.json());
+  dto.photos = Immutable.List(dto.photos);
   Object.assign(newState, dto);
   updateStore(store, newState);
 };
@@ -97,10 +98,7 @@ const GetDisplayCarouselForRover = () => {
   let carousel = `
     <div id="roverCarousel" class="carousel slide" data-ride="carousel" data-interval="10000">
         <div class="carousel-inner">
-            ${GetCarouselItem(photos[0], 0, store, true)}`;
-  for (let i = 1; i < store.photos.length; i++) {
-    carousel += GetCarouselItem(photos[i], i, store, false);
-  };
+            ${photos.map((photo, i) => GetCarouselItem(photo, i)).join(' ')}`;
   carousel += `
         <a class="carousel-control-prev" href="#roverCarousel" role="button" data-slide="prev">
             <span class="carousel-control-prev-icon" aria-hidden="true"></span>
@@ -122,17 +120,17 @@ const GetDisplayCarouselForRover = () => {
  *                               returns all the required data and updates the store with it.
  * @return {string} The proper HTML for the carousel items which is the photo & some info about the photo that is being displayed
  */
-const GetCarouselItem = (photo, photoIndex, captionData, isActive) => {
+const GetCarouselItem = (photo, photoIndex) => {
   return `
-    <div id="${captionData.rovers[captionData.rover_i]}_pic_${photoIndex}" class="carousel-item ${isActive ? 'active"' : '"'}>
+    <div id="${store.rovers[store.rover_i]}_pic_${photoIndex}" class="carousel-item ${photoIndex === 0 ? 'active"' : '"'}>
         <img src="${photo.img_src}" style="min-height:10%; max-height:10%; width:100%;">
         <div class="carousel-caption d-none d-md-block">
-            <h5>Status: ${captionData.status}</h5>
+            <h5>Status: ${store.status}</h5>
             <ul>
                 <li>Camera: ${photo.camera}</li>
-                <li>Photo Date: ${captionData.max_date}</li>
-                <li>Launch Date: ${captionData.launch_date}</li>
-                <li>Land Date: ${captionData.landing_date}</li>
+                <li>Photo Date: ${store.max_date}</li>
+                <li>Launch Date: ${store.launch_date}</li>
+                <li>Land Date: ${store.landing_date}</li>
             </ul>
         </div>      
     </div>`;
