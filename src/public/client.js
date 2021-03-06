@@ -7,7 +7,11 @@ const store = {
   landing_date: '',
   launch_date: '',
   status: '',
-  max_date: ''
+  max_date: '',
+  show_status: true,
+  show_camera: true,
+  show_photo_date: true,
+  show_landing_date: true
 };
 
 const root = document.getElementById('root');
@@ -30,7 +34,7 @@ const App = (state) => {
            <br>
             <section>
             <div class="inline">
-            <h2 style="text-align:center;color:white;"> <a class="previous round" onclick=RoverNavigate(false)>&#8249;</a>  ${store.rovers.get(store.rover_i)}  <a class="next round" onclick=RoverNavigate(true)>&#8250; </a></h2>
+            <h2 style="text-align:center;color:white;"> <a class="previous round" onclick=RoverNavigate(false)>&#8249;</a>  ${store.rovers.get(store.rover_i)} <a class="next round" onclick=RoverNavigate(true)>&#8250;</a>${GetSettingsButtonAndMenu()}</h2>
             </div>
             </section>
             ${GetDisplayCarouselForRover()}
@@ -44,7 +48,7 @@ window.addEventListener('load', async() => {
   render(root, store);
 });
 
-// ------------------------------------------------------  CAROUSEL NAVIGATION
+// ------------------------------------------------------  UI Functionality
 
 // Handles the navigation between rovers based on the buttons beside the rover's name. Will update store once
 // correct index is calculated.
@@ -72,9 +76,30 @@ const GetNextRoverIndex = (toNext) => {
   }
 };
 
+// Handles dynamic nature of the caption for each photo.
+// eslint-disable-next-line no-unused-vars
+const OnSettingChange = (setting) => {
+  if (setting.id === 'statusSetting') {
+    const updatedSetting = { show_status: setting.checked };
+    updateStore(store, updatedSetting);
+  }
+  if (setting.id === 'cameraSetting') {
+    const updatedSetting = { show_camera: setting.checked };
+    updateStore(store, updatedSetting);
+  }
+  if (setting.id === 'photoDateSetting') {
+    const updatedSetting = { show_photo_date: setting.checked };
+    updateStore(store, updatedSetting);
+  }
+  if (setting.id === 'landingDateSetting') {
+    const updatedSetting = { show_landing_date: setting.checked };
+    updateStore(store, updatedSetting);
+  }
+};
+
 // ------------------------------------------------------  API CALLS
 /**
- * @description API call to back end node server to retrieve all
+ * @description API call to back end node server to retrieve all the data and images for the rovers
  */
 
 const GetRoverDataAndImages = async(state, i) => {
@@ -125,15 +150,57 @@ const GetCarouselItem = (photo, photoIndex) => {
   return `
     <div id="${store.rovers[store.rover_i]}_pic_${photoIndex}" class="carousel-item ${photoIndex === 0 ? 'active"' : '"'}>
         <img src="${photo.img_src}" style="min-height:10%; max-height:10%; width:100%;">
-        <div class="carousel-caption d-none d-md-block">
-            <h5>Status: ${store.status}</h5>
-            <ul>
-                <li>Camera: ${photo.camera}</li>
-                <li>Photo Date: ${store.max_date}</li>
-                <li>Launch Date: ${store.launch_date}</li>
-                <li>Land Date: ${store.landing_date}</li>
-            </ul>
-        </div>      
+        ${GetCaptionsForPhoto(photo)}
     </div>`;
+};
+
+/**
+ * @description Generates captions for earch photo on the caraousel based on which settings they have enabled in the gear icon at the top right of page.
+ * @param {object} photo - The photo object that will be used to generate captions.
+ * @return {string} The proper html for caption of the photo.
+ */
+const GetCaptionsForPhoto = (photo) => {
+  const isDisplayable = store.show_status || store.show_camera || store.show_photo_date || store.show_landing_date;
+  if (isDisplayable) {
+    let captionBlock = '<div class="carousel-caption d-none d-md-block">';
+    if (store.show_status) {
+      captionBlock += `<h5>Status: ${store.status}</h5>`;
+    }
+    if (store.show_camera || store.show_photo_date || store.show_landing_date) {
+      captionBlock += '<ul>';
+      if (store.show_camera) {
+        captionBlock += `<li>Camera: ${photo.camera}</li>`;
+      }
+      if (store.show_photo_date) {
+        captionBlock += `<li>Photo Date: ${store.max_date}</li>`;
+      }
+      if (store.show_landing_date) {
+        captionBlock += `  <li>Landing Date: ${store.landing_date}</li>`;
+      }
+      captionBlock += '</ul>';
+    }
+    captionBlock += '</div>';
+    return captionBlock;
+  }
+  return '';
+};
+
+/**
+ * @description Generates display settings button and drop down menu.
+ * @return {string} The proper html for the setting button and drop down menu for the pieces of the display the user can enable/disable.
+ */
+const GetSettingsButtonAndMenu = () => {
+  const settingsButton =
+  `<button class="btn btn-default dropdown-toggle" type="button" id="settingsDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true" style="float:right;background-color: white;">
+    <img src='./assets/images/gear.svg' aria-hidden="true"</img>
+    <span class="caret"></span>
+  </button>
+  <ul class="dropdown-menu checkbox-menu allow-focus">
+    <label style="display:block;"><input id="statusSetting" type="checkbox"  style="padding:5px;margine-left:5px;position:relative;" onchange=OnSettingChange(this) ${store.show_status ? 'checked' : ''}> Status </label>
+    <label style="display:block;"><input id="cameraSetting" type="checkbox"  style="padding:5px;margine-left:5px;position:relative;" onchange=OnSettingChange(this) ${store.show_camera ? 'checked' : ''}> Camera </label>
+    <label style="display:block;"><input id="photoDateSetting" type="checkbox"  style="padding:5px;margine-left:5px;position:relative;" onchange=OnSettingChange(this) ${store.show_photo_date ? 'checked' : ''}> Photo Date </label>
+    <label style="display:block;"><input id="landingDateSetting" type="checkbox"  style="padding:5px;margine-left:5px;position:relative;" onchange=OnSettingChange(this) ${store.show_landing_date ? 'checked' : ''}> Land Date </label>
+  </ul>`;
+  return settingsButton;
 };
 // ------------------------------------------------------
